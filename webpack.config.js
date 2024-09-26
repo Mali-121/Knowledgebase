@@ -13,29 +13,43 @@ module.exports = {
 		publicPath: '/dist/',
 		filename: 'bundle.js'
     },
-	module: {
-		rules: [{
-			test: /\.vue$/,
-			use: 'vue-loader'
-		},
-		{
-			test: /\.scss$/,
-			use: [
-				'vue-style-loader',
-				'css-loader',
-				'sass-loader',
-			]
-		},
-		{
-			test: /\.(ttf|eot|woff|woff2)$/,
-			use: {
-				loader: 'url-loader',
-				options: {
-					name: '[name].[ext]',
-				},
-			},
-		  }]
+	devServer: {
+		historyApiFallback: true,
+		contentBase: '/.public',
+		port:9000,
 	},
+	module: {
+		rules: [
+			{
+				test: /\.vue$/,
+				use: 'vue-loader'
+			},
+			{
+				test: /\.scss$/,
+				use: [
+					'vue-style-loader',
+					'css-loader',
+					'sass-loader',
+				]
+			},
+			{
+				test: /\.css$/,
+				use: [
+					'vue-style-loader',
+					'css-loader'
+				]
+			},
+			{
+				test: /\.(ttf|eot|woff|woff2)$/,
+				use: {
+					loader: 'url-loader',
+					options: {
+						name: '[name].[ext]',
+					},
+				},
+			}
+		]
+	},	
 	plugins: [
 		new VueLoaderPlugin()
 	],
