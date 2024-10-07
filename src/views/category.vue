@@ -1,5 +1,11 @@
 <template>
   <div class="category-page">
+    <!-- Display error message if there's an error -->
+    <div v-if="errorMessage" class="error-message">
+      {{ errorMessage }}
+    </div>
+
+    <!-- Search Bar -->
     <div class="search-bar">
       <input
         type="text"
@@ -12,13 +18,15 @@
       </button>
     </div>
 
+    <!-- Navigation -->
     <nav>
       <router-link to="/" class="all-categories-link">All categories</router-link> > {{ selectedCategory ? selectedCategory.title : 'Loading...' }}
     </nav>
 
+    <!-- Main Content -->
     <div class="main-content">
-      <!-- Left section: Selected category card -->
-      <div v-if="selectedCategory && !isLoading" class="selected-category-card">
+      <!-- Left Section: Category Information -->
+      <div v-if="selectedCategory && !isArticlesLoading" class="selected-category-card">
         <i :class="['fas', categoryIcon(selectedCategory.icon)]" class="category-icon"></i>
         <h2>{{ selectedCategory.title }}</h2>
         <p class="updated-date">Updated {{ formatDate(selectedCategory.updatedOn) }}</p>
@@ -32,9 +40,9 @@
         <p>Loading category...</p>
       </div>
 
-      <!-- Middle section: Articles for selected category -->
+      <!-- Middle Section: Articles -->
       <div class="articles-list">
-        <div v-if="!isLoading && filteredArticles.length">
+        <div v-if="!isArticlesLoading && filteredArticles.length">
           <div v-for="article in filteredArticles" :key="article.id" class="article-item">
             <i class="fas fa-file-alt article-icon"></i>
             <div class="article-details">
@@ -44,7 +52,7 @@
             <i class="fas fa-chevron-right article-arrow"></i>
           </div>
         </div>
-        <div v-else-if="!isLoading">
+        <div v-else-if="!isArticlesLoading">
           <p>No articles available for this category.</p>
         </div>
         <div v-else>
@@ -53,8 +61,8 @@
       </div>
     </div>
 
-    <!-- Bottom section: Carousel of other categories -->
-    <div class="other-categories-section" v-if="!isLoading">
+    <!-- Bottom Section: Carousel for Other Categories -->
+    <div class="other-categories-section" v-if="!isCategoriesLoading">
       <h3>Other categories</h3>
       <div class="carousel-arrow-left" @click="scrollLeft">
         <i class="fas fa-chevron-left"></i>
@@ -83,8 +91,9 @@
   </div>
 </template>
 
+
 <script>
-import axios from 'axios';
+import { fetchCategories, fetchCategoryArticles } from '../apiService'; // Importing the service
 
 export default {
   props: ['id'], // Accept 'id' as a prop
@@ -94,6 +103,9 @@ export default {
       selectedCategory: null, // Category clicked from the home page
       articles: [], // Articles for the selected category
       isLoading: true, // Loading state
+      isCategoriesLoading: true, // Specific loading indicator for categories
+      isArticlesLoading: true, // Specific loading indicator for articles
+      errorMessage: null, // To store error messages
       searchQuery: '',
       currentIndex: 0, // Index to keep track of the current visible group of categories
       itemsPerPage: 3, // Number of items to show at a time
@@ -162,15 +174,18 @@ export default {
       this.$router.push(`/category/${categoryId}`);
     },
     fetchCategories() {
-      axios.get('http://localhost:9000/api/categories')
+      this.isCategoriesLoading = true; // Start category loading
+      fetchCategories()
         .then(response => {
           this.categories = response.data;
-
-          // Fetch the selected category based on the current route params
-          this.fetchCategory();
+          this.fetchCategory(); // Fetch the selected category once the categories are loaded
         })
         .catch(error => {
           console.error('Error fetching categories:', error);
+          this.errorMessage = 'Failed to load categories. Please try again later.';
+        })
+        .finally(() => {
+          this.isCategoriesLoading = false; // Stop category loading
         });
     },
     fetchCategory() {
@@ -182,21 +197,23 @@ export default {
         return;
       }
 
-      // Fetch the articles for the selected category
-      axios.get(`http://localhost:9000/api/category/${categoryId}/articles`)
+      this.isArticlesLoading = true; // Start articles loading
+      fetchCategoryArticles(categoryId)
         .then(response => {
           this.articles = response.data;
         })
         .catch(error => {
           console.error('Error fetching articles:', error);
+          this.errorMessage = 'Failed to load articles. Please try again later.';
         })
         .finally(() => {
-          this.isLoading = false;
+          this.isArticlesLoading = false; // Stop articles loading
         });
     }
   }
 };
 </script>
+
 
 <style scoped>
 /* Add your styles here */
@@ -230,6 +247,14 @@ export default {
 
 .category-page {
   padding: 2rem;
+}
+
+/* Error message styles */
+.error-message {
+  color: red;
+  font-size: 1.2rem;
+  text-align: center;
+  margin-bottom: 20px;
 }
 
 nav {
@@ -370,6 +395,7 @@ nav {
   display: flex;
   transition: all 0.3s ease;
   justify-content: center;
+  scroll-behavior: smooth;
 }
 
 .carousel-item {

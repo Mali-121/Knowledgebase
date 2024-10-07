@@ -1,19 +1,47 @@
 <template>
   <div class="home-container">
-    <!-- Header Section -->
+    <!-- Loading Spinner -->
+    <div v-if="loading" class="loading-spinner">
+      <i class="fas fa-spinner fa-spin"></i> Loading categories...
+    </div>
+
+    <!-- Error Message -->
+    <div v-if="error" class="error-message">
+      Failed to load categories. Please try again later.
+    </div>
 
     <!-- Search Bar -->
-    <div class="search-bar">
-      <input v-model="searchQuery" type="text" class="search-input" placeholder="Search for answers" />
-      <button class="search-button">
-        <i class="fas fa-search"></i>
+    <div v-if="!loading && !error" class="search-bar">
+      <input
+        v-model="searchQuery"
+        type="text"
+        class="search-input"
+        placeholder="Search for answers"
+        @keydown.enter="handleSearch"
+      />
+      <button class="search-button" aria-label="Search for answers" @click="handleSearch"> 
+        <i class="fas fa-search" aria-hidden="true"></i>
       </button>
     </div>
 
+    <!-- Error Message for Empty Search -->
+    <div v-if="showError" class="empty-search-error">
+      Please enter a search query before searching.
+    </div>
+
+    <!-- No Categories Found -->
+    <div v-if="filteredCategories.length === 0 && !loading && !error" class="no-categories-message">
+      <p>No categories match your search criteria.</p>
+    </div>
+
     <!-- Categories Grid -->
-    <div class="categories-grid">
+    <div v-if="!loading && !error && filteredCategories.length > 0" class="categories-grid">
       <div v-for="category in filteredCategories" :key="category.id" class="category-card">
-        <router-link :to="`/category/${category.id}`" class="category-link">
+        <router-link
+          :to="`/category/${category.id}`"
+          class="category-link"
+          :aria-label="'View category ' + category.title"
+        >
           <div class="category-icon">
             <i :class="['fas', categoryIcon(category.icon)]"></i>
           </div>
@@ -26,6 +54,8 @@
   </div>
 </template>
 
+
+
 <script>
 import axios from 'axios';
 
@@ -33,31 +63,41 @@ export default {
   data() {
     return {
       searchQuery: '', // For handling search input
-      categories: [] // To store categories fetched from the API
+      categories: [], // To store categories fetched from the API
+      loading: true, // Loading state
+      error: false, // Error state
+      showError: false, // For handling empty search error
     };
   },
   computed: {
     // Filter and sort categories based on search input and status (enabled)
     filteredCategories() {
       return this.categories
-        .filter(category => category.enabled) // Show only enabled categories
-        .filter(category => category.title.toLowerCase().includes(this.searchQuery.toLowerCase())) // Search filter
+        .filter((category) => category.enabled) // Show only enabled categories
+        .filter((category) =>
+          category.title.toLowerCase().includes(this.searchQuery.toLowerCase())
+        ) // Search filter
         .sort((a, b) => a.order - b.order); // Sort by order number
-    }
+    },
   },
   created() {
     // Fetch the categories when the component is created
-    axios.get('http://localhost:9000/api/categories')
-      .then(response => {
+    axios
+      .get('http://localhost:9000/api/categories')
+      .then((response) => {
         this.categories = response.data; // Assign the fetched categories to the data property
       })
-      .catch(error => {
+      .catch((error) => {
         console.error('Error fetching categories:', error); // Log any errors in the console
+        this.error = true; // Set error state if API call fails
+      })
+      .finally(() => {
+        this.loading = false; // Set loading state to false when done
       });
   },
   methods: {
     // Function to return the correct FontAwesome icon class based on the category title
-    categoryIcon(icon){
+    categoryIcon(icon) {
       const iconsMap = {
         play: 'fa-play-circle',
         comment: 'fa-comment',
@@ -73,15 +113,32 @@ export default {
     formatDate(date) {
       const options = { year: 'numeric', month: 'long', day: 'numeric' };
       return new Date(date).toLocaleDateString(undefined, options);
-    }
-  }
+    },
+    handleSearch() {
+      // Check if search input is empty
+      if (!this.searchQuery) {
+        this.showError = true; // Display error message
+        return;
+      }
+      // Reset the error if the input is not empty
+      this.showError = false;
+    },
+  },
 };
 </script>
+
 
 <style scoped>
 .home-container {
   text-align: center;
   padding: 50px 20px;
+}
+
+/* Error Message for Empty Search */
+.empty-search-error {
+  color: red;
+  font-size: 1.1rem;
+  margin-top: 10px;
 }
 
 /* Search Bar */
