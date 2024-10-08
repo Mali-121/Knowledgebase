@@ -122,6 +122,8 @@ export default {
       }
       // Reset the error if the input is not empty
       this.showError = false;
+
+      this.$router.push({name: 'SearchPage', params: {queryText: this.searchQuery}});
     },
   },
 };
